@@ -1,0 +1,37 @@
+# Secrets
+.env
+
+# Internal working documents - kept local, not published.
+# README.md is the one markdown file that is tracked.
+*.md
+!README.md
+
+# Data — raw and interim never committed (YouTube ToS + PII)
+data/raw/*
+data/interim/*
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+
+# Labeled data: keep the final CSV, ignore scratch exports
+data/labeled/*.jsonl
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Models / embeddings (large binaries)
+*.bin
+*.vec
+models_cache/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

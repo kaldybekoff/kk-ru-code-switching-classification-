@@ -1,0 +1,15 @@
+name,search_query,channel_id,priority,category,measured_mixed_pct,verified,note
+SmitTV,SMITTV,UCVG6d4imYDMZqA4ZyHk7L-A,2,livestream/informal,,no,recent uploads are Shorts with comments off - pull older long-form videos by hand
+kana beisekeyev,ZAMANDAS Kana Beisekeev,UCGWkcfbrL2MT4Q9ueTA5WDQ,1,interview,,no,same - use specific long videos not the channel feed
+Janar Baisemiz,Janar Baisemiz журналист,,1,interview/talk,high,yes,measured - strongest code-switching found so far
+AIRAN,AIRAN подкаст,,1,interview,high,yes,measured
+TARTARIA FILMS,TARTARIA FILMS дәстүрлі подкаст,,1,podcast,high,yes,measured
+Anna Danchenko,Anna Danchenko интервью,,1,interview,high,yes,measured
+ALIBEKOVKZ,ALIBEKOVKZ По Домам,,2,interview,medium,yes,measured
+Qazaq Stand Up,Qazaq Stand Up INTELLIGENTNO,,2,comedy,medium,yes,measured
+Stand Up Astana,Stand Up Astana,,2,comedy,medium,yes,measured
+CMN KZ,CMN KZ интервью,,2,interview,medium,yes,measured
+Marat Oralgazin,Қазақ Стендап Қызық Times,,2,comedy,medium,yes,measured
+SEGA KZ,SEGA KZ,,4,gaming/kids,3,yes,REJECTED - audience is children writing monolingual Kazakh
+Zhukonay,Zhukonay,,4,gaming/kids,2,yes,REJECTED - same
+УСАТИК Roblox,УСАТИК Roblox,,4,gaming/kids,4,yes,REJECTED - same
