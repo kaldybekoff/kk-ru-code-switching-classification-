@@ -5,6 +5,7 @@
 # README.md is the one markdown file that is tracked.
 *.md
 !README.md
+reports/*.html
 
 # Data — raw and interim never committed (YouTube ToS + PII)
 data/raw/*

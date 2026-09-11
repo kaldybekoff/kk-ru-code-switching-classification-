@@ -16,9 +16,14 @@ on text like this is uncharacterized. Code-switching NLP itself has concentrated
 handful of language pairs — mainly Hindi–English and Spanish–English, which have
 dedicated benchmarks (GLUECoS, LinCE) and a shared task (SemEval-2020 Task 9).
 
-Kazakh–Russian has none of that. The Kazakh resources that exist — KazNERD for NER,
-KazParC for machine translation — are monolingual or parallel by construction: clean
-Kazakh on one side, clean Russian on the other, never the two interleaved.
+Kazakh–Russian is only now starting to get that attention. Recent work has released a
+code-switched parallel corpus for machine translation (Borisov et al., 2025), a gold
+language-identification set (Savelyev, 2026), and a 100k-review Kazakhstani sentiment
+corpus benchmarking TF-IDF against mBERT, XLM-R and RemBERT (Yeshpanov, 2026). That last
+one reports that transformers consistently beat classical baselines.
+
+**What none of them report is whether that advantage survives as the text becomes
+genuinely mixed.** Every published comparison on this pair is aggregate.
 
 The pair is also structurally harder than the studied ones. Hindi–English and
 Spanish–English code-switching typically crosses two scripts, or appears in romanized
@@ -40,8 +45,9 @@ Cyrillic alphabet**, and in informal writing the Kazakh-specific characters
 | **H2** | Their advantage **shrinks as code-switching density rises** — they are pretrained on monolingual corpora and have effectively never seen mixed sentences. |
 | **H3** | fastText degrades less than TF-IDF on heavily mixed text, because character n-grams absorb Kazakh's agglutinative morphology and informal spelling variation. |
 
-H1 alone would replicate known results. **H2 is the contribution**: the density-stratified
-breakdown is what has not been reported for this language pair.
+H1 is a replication of Yeshpanov (2026) in a different domain. **H2 and H3 are the
+contribution** — no published work on this pair breaks performance down by how heavily
+the text is code-switched, and fastText is absent from existing comparisons.
 
 ## Task and data
 
@@ -145,6 +151,9 @@ guideline, source selection and the collection pipeline are complete.
 
 ## References
 
+Yeshpanov (2026), *100,000+ Movie Reviews from Kazakhstan* ·
+Savelyev (2026), *Loanword or Switch?* ·
+Borisov et al. (2025), *Low-resource MT for Code-switched Kazakh–Russian* ·
 Sitaram et al. (2019), *A Survey of Code-switched Speech and Language Processing* ·
 Doğruöz et al. (ACL 2021), *A Survey of Code-switching* ·
 Patwa et al., *SemEval-2020 Task 9: Sentiment Analysis of Code-Mixed Tweets* ·
