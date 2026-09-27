@@ -1,15 +1,26 @@
 name,search_query,channel_id,priority,category,measured_mixed_pct,verified,note
 SmitTV,SMITTV,UCVG6d4imYDMZqA4ZyHk7L-A,2,livestream/informal,,no,recent uploads are Shorts with comments off - pull older long-form videos by hand
-kana beisekeyev,ZAMANDAS Kana Beisekeev,UCGWkcfbrL2MT4Q9ueTA5WDQ,1,interview,,no,same - use specific long videos not the channel feed
-Janar Baisemiz,Janar Baisemiz журналист,,1,interview/talk,high,yes,measured - strongest code-switching found so far
-AIRAN,AIRAN подкаст,,1,interview,high,yes,measured
-TARTARIA FILMS,TARTARIA FILMS дәстүрлі подкаст,,1,podcast,high,yes,measured
-Anna Danchenko,Anna Danchenko интервью,,1,interview,high,yes,measured
-ALIBEKOVKZ,ALIBEKOVKZ По Домам,,2,interview,medium,yes,measured
-Qazaq Stand Up,Qazaq Stand Up INTELLIGENTNO,,2,comedy,medium,yes,measured
-Stand Up Astana,Stand Up Astana,,2,comedy,medium,yes,measured
-CMN KZ,CMN KZ интервью,,2,interview,medium,yes,measured
-Marat Oralgazin,Қазақ Стендап Қызық Times,,2,comedy,medium,yes,measured
+kana beisekeyev,ZAMANDAS Kana Beisekeev,UCGWkcfbrL2MT4Q9ueTA5WDQ,1,interview,9.3,yes,same - use specific long videos not the channel feed; re-measured Sprint 2 on full pool
+Janar Baisemiz,Janar Baisemiz журналист,,1,interview/talk,4.9,yes,measured - strongest code-switching found so far; re-measured Sprint 2 on full pool
+AIRAN,AIRAN подкаст,,1,interview,5.1,yes,measured; re-measured Sprint 2 on full pool
+TARTARIA FILMS,TARTARIA FILMS дәстүрлі подкаст,,1,podcast,13.8,yes,measured; re-measured Sprint 2 on full pool
+Anna Danchenko,Anna Danchenko интервью,,1,interview,7.6,yes,measured; re-measured Sprint 2 on full pool
+ALIBEKOVKZ,ALIBEKOVKZ По Домам,,2,interview,5.7,yes,measured; re-measured Sprint 2 on full pool
+Qazaq Stand Up,Qazaq Stand Up INTELLIGENTNO,,2,comedy,11.8,yes,measured; re-measured Sprint 2 on full pool
+Stand Up Astana,Stand Up Astana,,2,comedy,4.5,yes,measured; re-measured Sprint 2 on full pool
+CMN KZ,CMN KZ интервью,,2,interview,4.4,yes,measured; re-measured Sprint 2 on full pool
+Marat Oralgazin,Қазақ Стендап Қызық Times,,2,comedy,8.1,yes,measured; re-measured Sprint 2 on full pool
 SEGA KZ,SEGA KZ,,4,gaming/kids,3,yes,REJECTED - audience is children writing monolingual Kazakh
 Zhukonay,Zhukonay,,4,gaming/kids,2,yes,REJECTED - same
 УСАТИК Roblox,УСАТИК Roblox,,4,gaming/kids,4,yes,REJECTED - same
+NeAngime,NeAngime подкаст,,1,podcast,23.0,yes,"manual link - highest measured rate, small sample (n=161)"
+Million Show,Million Show,,1,interview,15.5,yes,manual link
+Лаура Лесбек,Лаура Лесбек интервью,,1,interview,11.3,yes,manual link
+Артур Югай,Артур Югай,,2,analysis,8.9,yes,manual link
+DOPE SOZ,DOPE SOZ подкаст,,2,podcast,8.7,yes,manual link
+PROMMA PODCAST,PROMMA PODCAST,,2,podcast,8.7,yes,manual link
+Жанерке Сейфуллина,Жанерке Сейфуллина,,2,interview,7.2,yes,manual link
+Azattyq TV,Azattyq TV Азаттық,,3,news/analysis,5.6,yes,manual link
+QAZSPORT TV,QAZSPORT TV,,3,sport,7.3,yes,manual link - tiny sample (n=55)
+Информбюро 31,Информбюро 31,,3,news,2.7,yes,manual link - lowest rate; short news clips
+Altyn Bala TV,Altyn Bala TV,,4,kids/cartoon,,yes,"REJECTED - manual link, comments disabled, kids content"

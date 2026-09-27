@@ -1,10 +1,18 @@
 # Secrets
 .env
 
-# Internal working documents - kept local, not published.
-# README.md is the one markdown file that is tracked.
+# Markdown is gitignored by default, with the research artifacts allowed back in.
+# The guideline and the sampling design are methodology, not working notes - their
+# version history is part of the record.
 *.md
 !README.md
+!PROJECT_PLAN.md
+!annotation/*.md
+!docs/*.md
+!reports/research_report.md
+
+# Video production scaffolding stays local.
+reports/video/
 reports/*.html
 
 # Data — raw and interim never committed (YouTube ToS + PII)
