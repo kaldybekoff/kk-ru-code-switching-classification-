@@ -95,16 +95,23 @@ additionally broken down by density bucket.
 
 ```
 ├── data/
-│   ├── raw/              # pulled comments (gitignored — carries author names)
+│   ├── raw/              # pulled comments (gitignored - carries author names)
 │   ├── interim/          # cleaned, deduplicated, anonymized (gitignored)
 │   ├── labeled/          # final annotated dataset + frozen CV folds
-│   └── sources.csv       # candidate channels with measured code-switch rates
+│   ├── sources.csv       # channels with measured code-switch rates
+│   └── videos.csv        # the 185 videos pulled from
 ├── src/
-│   ├── collect/          # YouTube Data API pull, channel resolution
-│   ├── preprocess/       # cleaning, anonymization, code-switch screening
-│   ├── features/         # TF-IDF, fastText, transformer embeddings
-│   ├── models/           # baseline and transformer classifiers
-│   └── eval/             # cross-validation, agreement, significance testing
+│   ├── collect/          # YouTube Data API pull, video discovery
+│   ├── preprocess/       # cleaning, language filter, density metric, sampling
+│   ├── annotate/         # annotation tooling and LLM prompt pipeline
+│   ├── features/         # TF-IDF, fastText, transformer representations
+│   ├── models/           # cross-validation harness
+│   └── eval/             # folds, validation, agreement, significance testing
+├── annotation/           # guideline (v0.3) and pilot log
+├── docs/                 # research framing, sampling design, setup notes
+├── reports/
+│   ├── research_report.md   # literature review + all findings, both sprints
+│   └── video/               # scripts, slides and upload notes (local only)
 └── notebooks/            # exploratory analysis
 ```
 
@@ -121,20 +128,51 @@ cp .env.example .env      # then add a YouTube Data API v3 key
 ### Pipeline
 
 ```bash
-# Collect comments (video IDs taken from the URL: youtube.com/watch?v=<ID>)
-python -m src.collect.youtube_pull --video VIDEO_ID_1 VIDEO_ID_2 --max 300
+# 1. Find long-form videos with live comment sections, ranked by comment count
+python -m src.collect.discover_videos --per-source 15 --min-comments 200
 
-# Screen a batch: how much code-switching does this source actually contain?
+# 2. Pull comments. --order time, not relevance: relevance front-loads
+#    heavily-upvoted comments, which are not what people typically write.
+python -m src.collect.youtube_pull --from-videos data/videos.csv --max 600 --order time
+
+# 3. Screen a source: how much code-switching does it actually contain?
 python -m src.preprocess.cs_screen --by-video --show 10
 
-# Build an anonymized annotation batch (two passes for reliability measurement)
-python -m src.preprocess.make_pilot --n 100 --mixed-share 0.5
+# 4. Clean, deduplicate, anonymize and screen the whole pool
+python -m src.preprocess.build_corpus
 
-# Measure annotation agreement between two annotation sheets
+# 5. Draw the stratified annotation sample + the uniform natural probe
+python -m src.preprocess.make_batches --target 1000 --natural 150 --retest 100
+
+# 6. Annotate a batch (keyboard-driven; the CSVs also open fine in Excel)
+python -m src.annotate.cli data/interim/batches/enriched_01.csv
+
+# 7. Check every finished batch before moving on
+python -m src.eval.validate_annotations data/interim/batches/enriched_01.csv
+
+# 8. Merge the annotated batches into the final dataset
+python -m src.preprocess.merge_annotations data/interim/batches/*.csv
+
+# Annotation agreement between two sheets (pass 1 vs. pass 2)
 python -m src.eval.kappa data/interim/pilot_100_pass1.csv data/interim/pilot_100_pass2.csv
 ```
 
 Run everything from the repository root — the scripts are invoked as modules.
+
+### Sampling is stratified, and says so
+
+A uniform sample of these comments is ~88% monolingual and would yield roughly 8
+high-density examples out of 1,000 — far too few for the subgroup comparison H2 and H3
+depend on. The corpus is therefore enriched for code-switching, and the enrichment is
+recorded rather than hidden: every row carries the stratum it was drawn from and its
+inclusion probability, and a separate uniform **natural probe** is annotated alongside it
+to give an unbiased estimate of how common code-switching actually is. Frequency claims
+come from the probe or from 1/p reweighting, never from the corpus as a whole.
+
+Two sub-populations are held aside and reported as scoped limitations: romanized
+(Latin-script) comments, where transliteration conventions carry a signal that Cyrillic
+does not, and comments under 5 meaningful tokens, for which the `low` density band is
+arithmetically unreachable. Full rationale and numbers in `docs/sampling_design.md`.
 
 ## Data handling
 
@@ -146,8 +184,10 @@ Run everything from the repository root — the scripts are invoked as modules.
 
 ## Status
 
-Corpus construction and baseline models are in progress. Research framing, annotation
-guideline, source selection and the collection pipeline are complete.
+Corpus construction is in progress. Research framing, annotation guideline, source
+selection, the collection pipeline, the cleaning and stratified-sampling pipeline and
+the annotation validation tooling are complete. Collection is scaling toward the ~35,000
+raw comments the density-stratified analysis requires; baseline models follow.
 
 ## References
 

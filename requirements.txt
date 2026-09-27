@@ -9,10 +9,13 @@ numpy>=1.26
 # --- Models / features ---
 scikit-learn>=1.4
 transformers>=4.40
+# CPU build is enough - the encoder is frozen, nothing is fine-tuned:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
 torch>=2.2
-# fasttext-wheel: prebuilt wheels, avoids needing a C++ compiler on Windows.
-# Note: no cp313 wheel yet — if this fails on Python 3.13, see docs/setup_notes.md
-fasttext-wheel>=0.9.2
+# fastText via gensim. The official `fasttext`/`fasttext-wheel` packages have no
+# cp313 build and need a C++ compiler; gensim ships the same skip-gram subword
+# algorithm as a maintained wheel. Verified on Python 3.13 / numpy 2.4.
+gensim>=4.3
 
 # --- Stats / eval ---
 scipy>=1.11

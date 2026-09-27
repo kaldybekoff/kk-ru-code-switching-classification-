@@ -4,9 +4,20 @@ Usage:
     python -m src.collect.youtube_pull --video VIDEO_ID [VIDEO_ID ...] --max 500
     python -m src.collect.youtube_pull --channel CHANNEL_ID --videos-per-channel 5 --max 500
     python -m src.collect.youtube_pull --from-sources data/sources.csv --max 300
+    python -m src.collect.youtube_pull --from-videos data/videos.csv --max 600
 
 Quota: 10,000 units/day. commentThreads.list = 1 unit per call, up to 100
-comments per call, so quota is not the binding constraint here.
+comments per call, so quota is not the binding constraint here — 40,000
+comments costs roughly 400 units.
+
+Comment ordering (--order):
+  relevance  YouTube's own ranking. Front-loads highly-liked comments, which
+             are not a representative sample of what people write.
+  time       Newest first. More representative, and the right choice when the
+             pull is the corpus rather than a screening probe.
+Sprint 1 used `relevance`; it stays the default so those batches remain
+reproducible. Prefer `time` for the Sprint 2 corpus pull, and record which was
+used — the choice is a sampling decision and belongs in the report.
 """
 
 import argparse
@@ -33,7 +44,7 @@ def get_client():
     return build("youtube", "v3", developerKey=key, cache_discovery=False)
 
 
-def fetch_comments(yt, video_id, max_comments):
+def fetch_comments(yt, video_id, max_comments, order="relevance"):
     """Yield top-level comments for one video. Replies are skipped — they are
     often reply-chains to other users rather than reactions to the video."""
     got, page_token = 0, None
@@ -45,7 +56,7 @@ def fetch_comments(yt, video_id, max_comments):
                 maxResults=min(100, max_comments - got),
                 pageToken=page_token,
                 textFormat="plainText",
-                order="relevance",
+                order=order,
             ).execute()
         except HttpError as e:
             # Most common: commentsDisabled, videoNotFound, quotaExceeded
@@ -98,11 +109,25 @@ def read_sources(path):
         return [r for r in csv.DictReader(f) if r.get("channel_id", "").strip()]
 
 
+def read_videos(path):
+    """Video IDs from data/videos.csv (written by discover_videos.py), most
+    comments first. Rows already marked pulled=yes are skipped so an
+    interrupted pull can be resumed without re-requesting them."""
+    with open(path, encoding="utf-8-sig") as f:
+        rows = [r for r in csv.DictReader(f) if r.get("video_id", "").strip()]
+    return [r["video_id"].strip() for r in rows
+            if (r.get("pulled") or "").strip().lower() != "yes"]
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--video", nargs="+", default=[], help="video IDs")
     p.add_argument("--channel", nargs="+", default=[], help="channel IDs (UC...)")
     p.add_argument("--from-sources", help="CSV with a channel_id column")
+    p.add_argument("--from-videos", help="CSV with a video_id column (data/videos.csv)")
+    p.add_argument("--order", choices=["relevance", "time"], default="relevance",
+                   help="comment ordering; see the module docstring - this is a "
+                        "sampling decision, not a preference")
     p.add_argument("--videos-per-channel", type=int, default=5)
     p.add_argument("--max", type=int, default=300, help="max comments per video")
     p.add_argument("--out", help="output JSONL (default: data/raw/comments_<date>.jsonl)")
@@ -112,6 +137,8 @@ def main():
 
     video_ids = list(args.video)
     channels = list(args.channel)
+    if args.from_videos:
+        video_ids += read_videos(args.from_videos)
     if args.from_sources:
         channels += [r["channel_id"].strip() for r in read_sources(args.from_sources)]
     for ch in channels:
@@ -123,6 +150,7 @@ def main():
 
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     out = Path(args.out) if args.out else RAW_DIR / f"comments_{datetime.now():%Y%m%d}.jsonl"
+    print(f"{len(video_ids)} videos, up to {args.max} comments each, order={args.order}")
 
     # Resume-safe: skip comments already in the output file.
     seen = set()
@@ -135,7 +163,7 @@ def main():
     with open(out, "a", encoding="utf-8") as f:
         for vid in video_ids:
             n = 0
-            for c in fetch_comments(yt, vid, args.max):
+            for c in fetch_comments(yt, vid, args.max, args.order):
                 if c["comment_id"] in seen:
                     continue
                 seen.add(c["comment_id"])
