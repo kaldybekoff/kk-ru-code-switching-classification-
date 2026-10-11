@@ -25,8 +25,9 @@ def load(path):
     with open(path, encoding="utf-8-sig") as f:
         for r in csv.DictReader(f):
             cid = (r.get("comment_id") or "").strip()
-            if cid:
-                out[cid] = r
+            if not cid or cid in out:
+                raise ValueError(f"{path}: missing or duplicate comment_id")
+            out[cid] = r
     return out
 
 
@@ -40,7 +41,7 @@ def kappa(pairs):
     cb = Counter(b for _, b in pairs)
     pe = sum(ca[k] / n * cb[k] / n for k in set(ca) | set(cb))
     if pe == 1.0:  # both annotators used a single label throughout
-        return 1.0 if po == 1.0 else 0.0
+        return None
     return (po - pe) / (1 - pe)
 
 
@@ -63,7 +64,9 @@ def report(a, b, axis, name_a, name_b, target):
             continue
         # A comment skipped by either annotator leaves the corpus entirely, so it
         # is not a disagreement about density - exclude it from that axis.
-        if axis != "sentiment" and "skip" in (va, vb):
+        if axis != "sentiment" and any(
+                (row.get("sentiment") or "").strip().lower() in ("", "skip")
+                for row in (a[cid], b[cid])):
             continue
         pairs.append((va, vb))
         if va != vb:
@@ -78,8 +81,11 @@ def report(a, b, axis, name_a, name_b, target):
     agree = sum(x == y for x, y in pairs)
     print("compared: {}   agreed: {} ({:.1f}%)".format(
         len(pairs), agree, agree / len(pairs) * 100))
-    flag = "OK" if k >= target else "BELOW TARGET ({})".format(target)
-    print("Cohen's kappa: {:.3f}  - {}  [{}]".format(k, interpret(k), flag))
+    if k is None:
+        print("Cohen's kappa is undefined because both sheets use one category.")
+    else:
+        flag = "OK" if k >= target else "BELOW TARGET ({})".format(target)
+        print("Cohen's kappa: {:.3f}  - {}  [{}]".format(k, interpret(k), flag))
 
     if disagreements:
         print("\ndisagreements ({}):".format(len(disagreements)))

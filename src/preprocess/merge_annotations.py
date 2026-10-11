@@ -30,6 +30,7 @@ from collections import Counter
 from pathlib import Path
 
 from src.eval.validate_annotations import VALID, load_manifest
+from src.eval.corpus_audit import audit
 from src.preprocess.textnorm import utf8_stdout
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -61,7 +62,9 @@ def main():
                    help="skip files whose name contains any of these")
     p.add_argument("--out", default=str(OUT))
     p.add_argument("--force", action="store_true",
-                   help="write even if rows fail validation (they are dropped)")
+                   help="development only, with --allow-incomplete: drop invalid rows")
+    p.add_argument("--allow-incomplete", action="store_true",
+                   help="development only: permit a partial corpus; never publish it")
     args = p.parse_args()
 
     paths = []
@@ -71,6 +74,23 @@ def main():
              if not any(x in Path(p).name for x in args.exclude)]
     if not paths:
         raise SystemExit("No batch files matched.")
+
+    # The manifest is the frozen sampling frame. Without this gate, the old
+    # merger silently published whatever happened to have a label today.
+    if not args.allow_incomplete:
+        status = audit()
+        if not status["ready"]:
+            raise SystemExit(
+                "Corpus is incomplete or invalid: {}/{} sampled comments "
+                "annotated, {} issue(s). Run python -m src.eval.corpus_audit. "
+                "Use --allow-incomplete only for a development smoke test."
+                .format(status["complete"], status["expected"], len(status["issues"])))
+        chosen = {Path(path).resolve() for path in paths}
+        expected_paths = {(ROOT / "data" / "interim" / "batches" / name).resolve()
+                          for name in status["batch_files"]}
+        if chosen != expected_paths:
+            raise SystemExit("Pass every natural_* and enriched_* batch from the "
+                             "sampling manifest when finalizing the corpus")
 
     clean = load_clean_index()
     manifest = load_manifest()
@@ -102,7 +122,14 @@ def main():
                 m = manifest.get(cid, {})
                 # A comment re-annotated in two batches keeps its first label;
                 # disagreements belong in the kappa report, not here.
-                merged.setdefault(cid, {
+                if cid in merged:
+                    previous = merged[cid]
+                    if (previous["sentiment"], previous["density"], previous["base_lang"]) != (
+                            sent, dens, lang):
+                        bad.append("{}:{}  conflicting duplicate comment_id {}".format(
+                            Path(path).name, i, cid))
+                    continue
+                merged[cid] = {
                     "comment_id": cid,
                     "text": c["text"],
                     "sentiment": sent,
@@ -115,7 +142,7 @@ def main():
                     "sample": m.get("sample", ""),
                     "screen_bucket": c["screen_bucket"],
                     "inclusion_prob": m.get("inclusion_prob", ""),
-                })
+                }
 
     if bad and not args.force:
         print("{} invalid row(s):".format(len(bad)))

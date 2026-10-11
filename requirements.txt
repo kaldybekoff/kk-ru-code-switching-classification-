@@ -9,6 +9,9 @@ numpy>=1.26
 # --- Models / features ---
 scikit-learn>=1.4
 transformers>=4.40
+huggingface_hub>=0.34
+sentencepiece>=0.2
+protobuf>=4.25
 # CPU build is enough - the encoder is frozen, nothing is fine-tuned:
 #   pip install torch --index-url https://download.pytorch.org/whl/cpu
 torch>=2.2

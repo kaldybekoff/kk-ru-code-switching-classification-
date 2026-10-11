@@ -10,6 +10,12 @@
 !annotation/*.md
 !docs/*.md
 !reports/research_report.md
+!reports/sprint3_corpus_audit.md
+!reports/sprint3_status.md
+!reports/sprint3_baselines.md
+!reports/sprint3_silver_audit.md
+!reports/sprint3_silver_baselines.md
+!reports/sprint3_silver_cv.md
 
 # Video production scaffolding stays local.
 reports/video/
