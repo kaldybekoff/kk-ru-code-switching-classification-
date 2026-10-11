@@ -62,8 +62,8 @@ The lexicon is bootstrapped from the corpus itself in four stages:
    Per annotation/guideline.md these count as the base language, so they are
    excluded from the minority count entirely.
 
-Proper names, numbers, emoji, URLs and @mentions are excluded throughout, as
-the guideline requires.
+Numbers, emoji and Latin placeholders are excluded. Proper names remain a
+known source of error in the automatic word-language assignments.
 """
 
 import argparse
@@ -340,6 +340,19 @@ def build_lexicon(texts, verbose=True):
     return lex, kk_lm, ru_lm, deacc_kk, collisions, confident
 
 
+def density_bucket(kk, ru):
+    if not kk + ru:
+        return ""
+    if min(kk, ru) == 0:
+        return "mono"
+    minority_share = min(kk, ru) / (kk + ru)
+    if minority_share <= 0.20:
+        return "low"
+    if minority_share <= 0.40:
+        return "med"
+    return "high"
+
+
 class Density:
     def __init__(self, lex, kk_lm, ru_lm, deacc_kk=None, collisions=None,
                  confident=None):
@@ -349,6 +362,11 @@ class Density:
         self.confident = set(confident or ())
 
     def word_lang(self, w):
+        # Latin insertions and URL/USER placeholders are outside this
+        # Cyrillic kk/ru measure. The character model can otherwise label
+        # English words as Russian.
+        if w.isascii():
+            return "ambiguous"
         known = self.lex.get(w)
         # The stripped-form index only gets a say where the lexicon has no
         # confident answer. Letting it override was a real bug: Russian `и`
@@ -426,16 +444,8 @@ class Density:
 
         total = kk + ru
         share = min(kk, ru) / total
-        if kk == 0 or ru == 0:
-            bucket = "mono"
-        elif share <= 0.20:
-            bucket = "low"
-        elif share <= 0.40:
-            bucket = "med"
-        else:
-            bucket = "high"
         return {"kk": kk, "ru": ru, "shared": shared, "counted": total,
-                "minority_share": round(share, 4), "density": bucket,
+                "minority_share": round(share, 4), "density": density_bucket(kk, ru),
                 "base_lang": base}
 
     def save(self, path=LEXICON):

@@ -19,6 +19,7 @@ Heavy dependencies (gensim, torch, transformers) are imported lazily, so the
 TF-IDF baselines run on a machine where the transformer stack is not installed.
 """
 
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -28,7 +29,10 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 
 ROOT = Path(__file__).resolve().parents[2]
 CLEAN = ROOT / "data" / "interim" / "corpus_clean.jsonl"
+MANIFEST = ROOT / "data" / "interim" / "batches" / "manifest.csv"
 CACHE = ROOT / "models_cache"
+XLMR_MODEL = "FacebookAI/xlm-roberta-base"
+XLMR_REVISION = "e73636d4f797dec63c3081bb6ed5c7b0bb3f2089"
 
 TOKEN_RE = re.compile(r"[Ѐ-ӿa-zA-Z]+")
 
@@ -75,27 +79,36 @@ class TfidfChar:
 class FastTextDoc:
     """Subword embeddings trained on the *unlabeled* corpus, then frozen.
 
-    Training on all 43k unlabeled comments rather than on the ~1k labeled ones
-    is deliberate and is not leakage: no label is involved, and the same frozen
-    model is applied to every fold. It is what gives the subword vectors enough
-    text to be worth anything.
+    All sampled comments are excluded from embedding training. When
+    training_videos is set, additional comments are restricted to those videos.
     """
 
     name = "fasttext"
 
-    def __init__(self, dim=100, epochs=10, min_count=2, corpus=CLEAN):
+    def __init__(self, dim=100, epochs=10, min_count=2, corpus=CLEAN, training_videos=None):
         self.dim, self.epochs, self.min_count, self.corpus = (
             dim, epochs, min_count, Path(corpus))
         self.model = None
+        self.training_videos = training_videos
 
     def _corpus_sentences(self):
         if not self.corpus.exists():
             raise SystemExit(
                 "{} not found - run build_corpus first.".format(self.corpus))
+        if not MANIFEST.exists():
+            raise SystemExit(f"{MANIFEST} not found - sampled IDs are needed to avoid leakage")
+        import csv
+        with open(MANIFEST, encoding="utf-8-sig", newline="") as f:
+            sampled = {r["comment_id"] for r in csv.DictReader(f)}
         with open(self.corpus, encoding="utf-8") as f:
             for line in f:
                 if line.strip():
-                    toks = tokenize(json.loads(line)["text"])
+                    row = json.loads(line)
+                    if row["comment_id"] in sampled:
+                        continue
+                    if self.training_videos is not None and row["video_id"] not in self.training_videos:
+                        continue
+                    toks = tokenize(row["text"])
                     if toks:
                         yield toks
 
@@ -111,17 +124,30 @@ class FastTextDoc:
                 "(the official fasttext wheel has no cp313 build; gensim's "
                 "implementation is the same algorithm)")
         CACHE.mkdir(exist_ok=True)
-        cached = CACHE / "fasttext_d{}_e{}.model".format(self.dim, self.epochs)
-        if cached.exists():
+        fingerprint = hashlib.sha256()
+        for path in (self.corpus, MANIFEST):
+            if not path.exists():
+                raise SystemExit(f"{path} not found")
+            with open(path, "rb") as f:
+                for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                    fingerprint.update(chunk)
+        fingerprint.update(f"{self.dim}:{self.epochs}:{self.min_count}:2026".encode())
+        cached = CACHE / "fasttext_{}.model".format(fingerprint.hexdigest()[:16])
+        if self.training_videos is None and cached.exists():
             self.model = FastText.load(str(cached))
             return self
         sents = list(self._corpus_sentences())
+        if not sents:
+            raise ValueError("No unsampled comments on the training videos for fastText")
         self.model = FastText(
             vector_size=self.dim, window=5, min_count=self.min_count,
-            sg=1, epochs=self.epochs, workers=4, seed=2026)
+            sg=1, epochs=self.epochs, workers=1, seed=2026)
         self.model.build_vocab(sents)
         self.model.train(sents, total_examples=len(sents), epochs=self.epochs)
-        self.model.save(str(cached))
+        # Training-video sets change every fold. Keep those models in memory
+        # only, so the whole-corpus cache remains specific to its own protocol.
+        if self.training_videos is None:
+            self.model.save(str(cached))
         return self
 
     def transform(self, texts):

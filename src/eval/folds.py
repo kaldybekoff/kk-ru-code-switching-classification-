@@ -15,20 +15,21 @@ any result has been recorded invalidates every number already reported.
 Design:
   - A held-out test set is split off first and never touched during development.
   - The remaining data is cut into stratified k folds for cross-validation.
-  - Stratification is on (sentiment x density), not sentiment alone: the whole
-    study is a per-density-bucket comparison, so a fold that happens to hold two
-    `high` examples would make the subgroup analysis noise.
-  - Grouping is by video_id where it does not break stratification, so
-    near-duplicate reactions to the same moment of the same video do not sit on
-    both sides of a split.
+  - Stratification targets (sentiment x density), not sentiment alone: the
+    study compares performance by density bucket. Exact cell counts are not
+    always possible when all comments from a video stay together.
+  - Grouping by video_id is strict, so reactions to the same video cannot sit
+    on opposite sides of a split. The test split is selected from 200 seeded
+    group candidates to approximate the target row share and cell balance.
 """
 
 import argparse
 import csv
 import json
-import random
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
+
+from sklearn.model_selection import GroupShuffleSplit, StratifiedGroupKFold
 
 from src.preprocess.textnorm import utf8_stdout
 
@@ -42,7 +43,7 @@ def load_labeled(path=LABELED):
         raise SystemExit(
             "{} not found.\nRun: python -m src.preprocess.merge_annotations "
             "data/interim/batches/*.csv".format(path))
-    with open(path, encoding="utf-8-sig") as f:
+    with open(path, encoding="utf-8-sig", newline="") as f:
         return list(csv.DictReader(f))
 
 
@@ -52,38 +53,40 @@ def stratum(r):
 
 
 def make_splits(rows, k, test_share, seed):
-    rng = random.Random(seed)
-    by_cell = defaultdict(list)
-    for r in rows:
-        by_cell[stratum(r)].append(r["comment_id"])
+    if not 0 < test_share < 1 or k < 2:
+        raise ValueError("test_share must be in (0, 1), and k >= 2")
+    if len({r.get("video_id") or r["comment_id"] for r in rows}) < k + 1:
+        raise ValueError("Not enough video groups for a grouped test split and CV")
+    labels = [stratum(r) for r in rows]
+    groups = [r.get("video_id") or r["comment_id"] for r in rows]
+    counts = Counter(labels)
 
-    test, pool = [], []
-    for cell, ids in sorted(by_cell.items()):
-        ids = sorted(ids)
-        rng.shuffle(ids)
-        n_test = int(round(len(ids) * test_share))
-        # A cell too small to give up a test example keeps all of it for
-        # training; the test set stays stratified, just short in that cell.
-        test += ids[:n_test]
-        pool += ids[n_test:]
-
-    by_cell_pool = defaultdict(list)
-    cell_of = {r["comment_id"]: stratum(r) for r in rows}
-    for cid in pool:
-        by_cell_pool[cell_of[cid]].append(cid)
-
-    folds = [[] for _ in range(k)]
-    for cell, ids in sorted(by_cell_pool.items()):
-        rng.shuffle(ids)
-        # Deal round-robin from a rotating start so no fold is systematically
-        # favoured in the small cells.
-        offset = rng.randrange(k)
-        for i, cid in enumerate(ids):
-            folds[(i + offset) % k].append(cid)
-
-    for f in folds:
-        rng.shuffle(f)
-    rng.shuffle(test)
+    # GroupShuffleSplit is repeated with a fixed seed; choose the candidate
+    # closest to the requested row share and joint sentiment×density mix.
+    chooser = GroupShuffleSplit(n_splits=200, test_size=test_share, random_state=seed)
+    best = None
+    for train_idx, test_idx in chooser.split(rows, labels, groups):
+        test_counts = Counter(labels[i] for i in test_idx)
+        score = abs(len(test_idx) / len(rows) - test_share)
+        score += sum(abs(test_counts[cell] / counts[cell] - test_share)
+                     for cell in counts) / len(counts)
+        if best is None or score < best[0]:
+            best = (score, train_idx, test_idx)
+    _, train_idx, test_idx = best
+    pool = [rows[i] for i in train_idx]
+    pool_labels = [stratum(r) for r in pool]
+    pool_groups = [r.get("video_id") or r["comment_id"] for r in pool]
+    if len(set(pool_groups)) < k:
+        raise ValueError("Not enough training video groups for CV")
+    cv = StratifiedGroupKFold(n_splits=k, shuffle=True, random_state=seed)
+    folds = [[pool[i]["comment_id"] for i in valid_idx]
+             for _, valid_idx in cv.split(pool, pool_labels, pool_groups)]
+    test = [rows[i]["comment_id"] for i in test_idx]
+    all_ids = [cid for fold in folds for cid in fold] + test
+    if any(not fold for fold in folds) or not test or len(all_ids) != len(set(all_ids)):
+        raise ValueError("Grouped splitting produced an empty or overlapping partition")
+    if set(all_ids) != {r["comment_id"] for r in rows}:
+        raise ValueError("Grouped splitting did not cover every comment")
     return folds, test
 
 
