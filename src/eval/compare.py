@@ -20,9 +20,8 @@ its own floor.
 and there are several of them, so raw p-values would overstate significance.
 Holm controls the family-wise error rate without assuming independence.
 
-**Confidence intervals on the per-bucket numbers.** `high` has a few hundred
-items at most; a margin reported without its interval invites a conclusion the
-sample cannot support. Where the interval crosses zero, this says so.
+**Bucket sizes and length control.** Small high-density cells and comment
+length differences limit the interpretation of density-specific margins.
 """
 
 import argparse
@@ -111,12 +110,18 @@ def main():
 
     by_rep = defaultdict(dict)          # rep -> comment_id -> row
     for r in rows:
+        if r["comment_id"] in by_rep[r["representation"]]:
+            raise SystemExit("Duplicate prediction for a representation/comment")
         by_rep[r["representation"]][r["comment_id"]] = r
     reps = sorted(by_rep)
-    common = set.intersection(*(set(d) for d in by_rep.values()))
-    if not common:
-        raise SystemExit("Representations share no comments - rerun run_cv.")
-    ids = sorted(common)
+    reference = {cid: (r["gold"], r["density"], r["fold"])
+                 for cid, r in by_rep[reps[0]].items()}
+    if any({cid: (r["gold"], r["density"], r["fold"])
+            for cid, r in by_rep[rep].items()} != reference for rep in reps[1:]):
+        raise SystemExit("Representations must have identical IDs, labels, density and folds")
+    ids = sorted(reference)
+    if not ids:
+        raise SystemExit("No predictions matched.")
 
     gold = {cid: by_rep[reps[0]][cid]["gold"] for cid in ids}
     dens = {cid: by_rep[reps[0]][cid]["density"] for cid in ids}
@@ -130,7 +135,8 @@ def main():
 
     # ---- H1: overall ---------------------------------------------------------
     section("Overall (H1)", w)
-    w("Macro-F1 over the cross-validated predictions. Accuracy is shown only "
+    protocol = "blind AI review" if {r["fold"] for r in by_rep[reps[0]].values()} == {"blind_ai_review"} else "cross-validated"
+    w(f"Macro-F1 over the {protocol} predictions. Accuracy is shown only "
       "next to the majority-class floor it has to beat.")
     w("")
     floor = Counter(gold.values()).most_common(1)[0][1] / len(ids)
@@ -178,20 +184,21 @@ def main():
           + " | ".join(cells) + " |")
 
     w("")
-    w("### Does the best representation's margin shrink with density? (H2)")
+    w("### Does XLM-R's margin shrink with density? (H2)")
     w("")
-    others = [r for r in reps if r != best]
+    target = "xlmr" if "xlmr" in reps else best
+    others = [r for r in reps if r != target]
     if others:
-        w("| Bucket | n | {} | best of the rest | margin |".format(best))
+        w("| Bucket | n | {} | best of the rest | margin |".format(target))
         w("|---|---|---|---|---|")
         for b in BUCKETS:
-            if b not in per_bucket or best not in per_bucket[b]:
+            if b not in per_bucket or target not in per_bucket[b]:
                 continue
             bids = [c for c in ids if dens[c] == b]
             rest = max((per_bucket[b][r] for r in others), default=0.0)
             w("| {} | {} | {:.3f} | {:.3f} | **{:+.3f}** |".format(
-                b, len(bids), per_bucket[b][best], rest,
-                per_bucket[b][best] - rest))
+                b, len(bids), per_bucket[b][target], rest,
+                per_bucket[b][target] - rest))
         w("")
         w("H2 predicts this margin falls from `mono` to `high`. Read it together "
           "with the bucket sizes - a margin computed on under ~100 items is not "

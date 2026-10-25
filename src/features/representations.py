@@ -175,9 +175,10 @@ class TransformerDoc:
 
     name = "xlmr"
 
-    def __init__(self, model_name="xlm-roberta-base", batch_size=16, max_len=128):
-        self.model_name, self.batch_size, self.max_len = (
-            model_name, batch_size, max_len)
+    def __init__(self, model_name=XLMR_MODEL, revision=XLMR_REVISION,
+                 batch_size=8, max_len=256, device=None):
+        self.model_name, self.revision = model_name, revision
+        self.batch_size, self.max_len, self.device = batch_size, max_len, device
         self.tok = self.model = None
 
     def fit(self, texts=None):
@@ -191,22 +192,30 @@ class TransformerDoc:
                 "transformers/torch are not installed.\n"
                 "  pip install torch --index-url https://download.pytorch.org/whl/cpu\n"
                 "  pip install transformers")
-        CACHE.mkdir(exist_ok=True)
+        cache_dir = CACHE / "hf"
+        cache_dir.mkdir(parents=True, exist_ok=True)
         self.tok = AutoTokenizer.from_pretrained(
-            self.model_name, cache_dir=str(CACHE))
+            self.model_name, revision=self.revision, cache_dir=str(cache_dir))
         self.model = AutoModel.from_pretrained(
-            self.model_name, cache_dir=str(CACHE)).eval()
+            self.model_name, revision=self.revision,
+            cache_dir=str(cache_dir)).eval()
+        self.device = self.device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.model.to(self.device)
         self._torch = torch
         return self
 
     def transform(self, texts):
+        if self.model is None:
+            raise ValueError("Call fit() before transform()")
+        if not texts:
+            return np.empty((0, self.model.config.hidden_size), dtype=np.float32)
         torch = self._torch
         out = []
-        with torch.no_grad():
+        with torch.inference_mode():
             for i in range(0, len(texts), self.batch_size):
                 batch = list(texts[i:i + self.batch_size])
                 enc = self.tok(batch, padding=True, truncation=True,
-                               max_length=self.max_len, return_tensors="pt")
+                               max_length=self.max_len, return_tensors="pt").to(self.device)
                 hid = self.model(**enc).last_hidden_state
                 mask = enc["attention_mask"].unsqueeze(-1).float()
                 # Mean over real tokens only; padding would drag vectors toward
