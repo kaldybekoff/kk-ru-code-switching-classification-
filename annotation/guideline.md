@@ -1,9 +1,10 @@
 # Annotation Guideline v0.3
 
 Kazakh–Russian code-switched YouTube comments
-**Still to be revised after the pilot round (100 comments, Cohen's kappa) — v0.2 only
-adds the corpus-scope rules settled during Sprint 2 cleaning. The edge-case tables below
-are unchanged and remain untested.**
+The original human pilot has six filled sentiments in pass one and zero in pass two.
+For the week 10 AI route, Cardiff labels sentiment at comment level. The deterministic
+metric estimates word languages and groups comments. The blind AI review is a separate
+comparison. [Week 10 audit and worked examples](../reports/week10_audit_ru.md)
 
 Every comment gets **two independent labels**: a sentiment label (axis 1) and a
 code-switch density label (axis 2). They are annotated at the same time but must
@@ -128,7 +129,7 @@ by the **word**, not the letters:
 > This matters more than a typo would: worked examples are what an annotator calibrates
 > against, so an error here propagates into every label.
 >
-> Reproduce the table at any time with `python -m src.preprocess.density`, which prints
+> Reproduce the table at any time with `python -m src.preprocess.density --no-write`, which prints
 > these five examples with their token counts before doing anything else.
 
 ## Annotation record format
@@ -145,7 +146,7 @@ comment_id,sentiment,density,base_lang,notes
 - `notes`: free text — **always fill this in when you hesitated**. These comments are
   the input to the next guideline revision.
 
-## Procedure (solo — intra-annotator agreement)
+## Optional procedure for a same-reviewer retest
 
 With one annotator, inter-annotator kappa is not available. The substitute is
 **test-retest reliability**: annotate the same batch twice, far enough apart that you are

@@ -18,14 +18,15 @@ Two samples are drawn from the same cleaned pool:
 | **natural probe** | uniform random, no enrichment | An unbiased estimate of the real density and sentiment distribution. The only part of the corpus that may be quoted for "how common is X". |
 | **enriched sample** | stratified on the **measured** density metric, equal allocation across the four buckets | Supplies enough medium- and high-density examples for H2 and H3 to be testable. |
 
-Every enriched row records the stratum it came from and its inclusion probability, so any
-frequency claim can be reweighted by 1/p back to population scale. Both samples are
-annotated with the same guideline by the same annotator, in interleaved batches.
+The enriched rows record the fraction taken from each stratum in the legacy field
+`inclusion_prob`. The video round-robin design gives individual comments unequal
+selection probabilities. Use the uniform 150-comment probe for frequencies in the clean pool.
 
 ## 2. Why uniform sampling alone does not work
 
-Measured on the full pull (51,425 raw comments from 185 long-form videos), counting
-only density-eligible comments:
+The following planning counts precede the neighbouring-language filter. The final clean
+pool is 42,497, including 35,574 with at least five surface tokens. The stricter week 10
+analysis counts only words assigned to Kazakh or Russian.
 
 | | Count | Share |
 |---|---|---|
@@ -48,9 +49,7 @@ So enrichment is not a convenience. It is what makes H2 and H3 answerable at all
 ## 3. What enrichment costs, and how it is paid
 
 **Cost 1 — the corpus is not a population sample.** Mitigated by the natural probe and by
-recording inclusion probabilities. Any sentence in the report of the form "X% of
-Kazakhstani YouTube comments are code-switched" must come from the probe, not from the
-corpus as a whole.
+recording stratum fractions. The probe describes the selected videos' cleaned comments.
 
 **Cost 2 — selection used to be made by a heuristic with unknown recall.** The Sprint 1
 screen recognised only words from two closed lists, so content-word switches were
@@ -101,7 +100,7 @@ Screened `high` is 0.84% of the density-eligible pool, so reaching ~250 high-den
 comments needed roughly 30,000 usable comments. The Sprint 1 pull of 6,000 was about one
 sixth of that.
 
-Collected in Sprint 2:
+Sprint 2 planning snapshot before filtering neighbouring languages:
 
 | | |
 |---|---|
@@ -214,7 +213,7 @@ python -m src.preprocess.build_corpus
 python -m src.preprocess.make_batches --target 1000 --natural 150 --retest 100 \n    --batch-size 150 --strata high,med,low,mono
 ```
 
-`make_batches` is seeded (`--seed 2026`). The seed, the inclusion probabilities and the
+`make_batches` is seeded (`--seed 2026`). The seed, the sampling fractions and the
 per-video coverage are written to `data/interim/batches/sampling_manifest.md` on every
 run. Regenerating the sample after annotation has started invalidates it — if the pool
 grows, draw a **supplementary** batch instead, with its own manifest.

@@ -22,9 +22,8 @@ So the sample is stratified and deliberately enriched. The cost of that is that
 label and density frequencies in the corpus no longer match the population.
 That cost is paid honestly rather than hidden:
 
-1. Every sampled row records the **stratum it was drawn from and its inclusion
-   probability**, so any frequency claim can be reweighted by 1/p back to
-   population scale.
+1. Each enriched row records its original stratum and the fraction taken.
+   Video round-robin selection gives comments unequal chances within a stratum.
 2. A separate **natural probe** is drawn uniformly at random, with no
    enrichment at all. It is annotated with the same guideline and gives an
    unbiased estimate of how common code-switching actually is - the question
@@ -295,13 +294,15 @@ def main():
     a("| **To annotate (pass 1)** | **{}** |".format(len(sampled)))
     a("| Retest (pass 2, re-draw) | {} |".format(len(retest)))
     a("")
-    a("## Inclusion probabilities")
+    a("## Sampling fractions")
     a("")
-    a("Reweight any population-level frequency claim by 1/p.")
+    a("Use the uniform natural probe to estimate frequencies in the cleaned pool. "
+      "The enriched fraction records allocation across a stratum. "
+      "Round-robin selection across videos gives unequal item probabilities.")
     a("")
     a("Stratified on: **{}**".format(field))
     a("")
-    a("| Sample | Stratum | Available | Taken | p |")
+    a("| Sample | Stratum | Available | Taken | Fraction |")
     a("|---|---|---|---|---|")
     a("| natural | (all) | {} | {} | {:.4f} |".format(len(pool), len(natural), p_natural))
     for s in strata:

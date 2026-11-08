@@ -12,6 +12,14 @@ Below target → fix the guideline, bump the version, run a **fresh** batch.
 
 ---
 
+## Week 10 evidence
+
+The historical 100-comment pilot contains six first-pass sentiment labels and an
+empty second pass. A separate 100-row retest of the main sample has two completed
+pairs. The main sample has 24 filled first-pass labels including one skip.
+The dated pilot fields below are a blank template. The completed 100-row AI review
+and its agreement statistics are recorded in the [AI audit](../reports/sprint3_silver_audit.md).
+
 ## Round 1 — <date>
 
 - Guideline version: v0.1

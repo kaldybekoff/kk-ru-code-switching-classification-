@@ -4,7 +4,7 @@
 
 Everything from Sprints 1 and 2 in one place: the literature review and the research gap,
 how the sources were chosen, how the corpus was built, and what building it turned up.
-Video production material lives in `reports/video/`; it is scaffolding, not research.
+The [week 10 audit](week10_audit_ru.md) connects this corpus history to the verified experiments.
 
 | | |
 |---|---|
@@ -20,8 +20,10 @@ Video production material lives in `reports/video/`; it is scaffolding, not rese
 | Sprint | Weeks | Status |
 |---|---|---|
 | 1 — Literature review and research framing | 1–2 | Complete |
-| 2 — Dataset preparation and annotation | 3–4 | Corpus complete; annotation in progress |
-| 3 — Corpus finalization and baseline models | 5–6 | Pipeline written and tested, waiting on labels |
+| 2 — Dataset preparation and annotation | 3–4 | 1,000 sampled comments labeled by AI. Original pass-one sheets have 24 filled rows. |
+| 3 — Corpus finalization and baseline models | 5–6 | 997 usable silver labels, a 100-comment blind AI review and trained baselines. Human agreement remains open. |
+| 4 — Transformer representation | 7–8 | Frozen XLM-R evaluated on the same comments as the baselines. |
+| 5 — Comparative experiments | 9–10 | Eight classifiers evaluated. See the [current statistical comparison](sprint5_comparison.md). |
 
 ### The question
 
@@ -33,8 +35,8 @@ Video production material lives in `reports/video/`; it is scaffolding, not rese
 **H2** — their advantage shrinks as code-switching density rises.
 **H3** — fastText degrades less than TF-IDF on heavily mixed text.
 
-H1 replicates a known result. H2 and H3 are the contribution: no published work on this
-pair breaks performance down by how heavily the text is mixed.
+H1 tests transfer to a new domain and a frozen encoder. H2 and H3 extend the aggregate
+sentiment comparisons in the works reviewed below with a density breakdown.
 
 ---
 
@@ -45,10 +47,7 @@ Weeks 1–2 · Yeskendir Kaldybek
 **Scope:** classification methods and text representations for code-switched NLP;
 existing Kazakh/Turkic NLP resources; the gap this project fills.
 
-> **Honesty note.** Summaries below are the substance of each work — what it argues and
-> why it matters here. Claims tagged **⚠ verify** are specific numbers I have not
-> confirmed against the paper. Do **not** put a ⚠ number into the final report or the
-> video without opening the source first. Everything untagged is safe to state.
+The papers and dataset releases below supply the resource counts used in this project.
 
 ---
 
@@ -155,14 +154,15 @@ gracefully under spelling variation. Prediction: fastText loses less than TF-IDF
 density and informality rise.
 
 Companion resource: **Grave et al. (LREC 2018), *Learning Word Vectors for 157
-Languages*** — pretrained vectors trained on Wikipedia + Common Crawl. Kazakh is expected
-to be among the 157 ⚠ verify before relying on it.
+Languages*** includes Kazakh vectors trained on Wikipedia and Common Crawl. This project's
+fastText embeddings are trained locally. [Published language list](https://github.com/facebookresearch/fastText/blob/main/docs/crawl-vectors.md)
 
 **XLM-R — Conneau et al. (ACL 2020), *Unsupervised Cross-lingual Representation Learning
 at Scale***
 
 Transformer encoder pretrained with masked language modelling on **CC-100: 100 languages,
-~2.5 TB of filtered CommonCrawl**. Kazakh is one of the 100 ⚠ verify exact data size.
+over 2 TB of filtered Common Crawl**. The Kazakh portion contains 476 million tokens
+(6.4 GiB). [Conneau et al., Table 6](https://aclanthology.org/2020.acl-main.747.pdf)
 Two findings we need:
 
 - Low-resource languages gain substantially from cross-lingual transfer at scale.
@@ -170,16 +170,12 @@ Two findings we need:
   to a point and then *degrades* per-language performance, because capacity is shared.
 
 *Takeaway for us — this is the core argument for H2.* CC-100 is assembled as **monolingual
-web text per language**. The model has seen a lot of Kazakh and a lot of Russian, but
-essentially no text where the two alternate inside one sentence. Its cross-lingual
-alignment is learned indirectly, not from mixed input. So we should expect strong
-performance on monolingual comments and weaker relative performance as mixing increases —
-which is precisely the hypothesis, and now it has a mechanism behind it rather than being
-a guess.
+web text per language**. The authors report sizes by language. The frequency of
+Kazakh–Russian switches within those documents is unknown. H2 tests whether increasing
+mixing changes the encoder's margin on this project's YouTube data.
 
-**mBERT — Devlin et al. (NAACL 2019)** — 104 Wikipedia languages; the encoder most CS
-papers benchmark against, hence the natural secondary comparison. Kazakh expected to be
-included ⚠ verify.
+The cased multilingual BERT release includes Kazakh among its 104 Wikipedia languages.
+[Google Research model documentation](https://github.com/google-research/bert/blob/master/multilingual.md)
 
 **Winata et al. (CALCS 2021), *Are Multilingual Models Effective in Code-Switching?* —
 the single most relevant paper to our hypothesis.**
@@ -200,20 +196,13 @@ which is the finer-grained version of their question.
 
 | Resource | What it is | Code-switched? |
 |---|---|---|
-| **KazNERD** (Yeshpanov, Khassanov, Varol, LREC 2022) | Kazakh NER dataset, ~112k sentences ⚠ verify, 25 entity classes, openly released | **No** — monolingual Kazakh |
-| **KazParC** (Yeshpanov et al., 2024) | Kazakh–English–Russian–Turkish parallel corpus for MT, plus the Tilmash MT model | **No** — parallel, i.e. clean monolingual on each side |
+| **KazNERD** (Yeshpanov et al., 2022) | 112,702 sentences, 25 entity classes. [Original release](https://github.com/IS2AI/KazNERD) | Kazakh NER |
+| **KazParC** (Yeshpanov et al., 2024) | 371,902 parallel sentences across Kazakh, English, Russian and Turkish. [Paper](https://arxiv.org/abs/2403.19399) | Parallel translation |
 | **Mirzakhalov et al. (EMNLP 2021)** | Large-scale MT study across 22 Turkic languages + parallel data | **No** |
 | Apertium Kazakh pairs, Kazakh morphological analyzers | Rule-based morphology and translation tooling | **No** — but usable for token analysis if we need morphology |
 
-The pattern is consistent: **Kazakh NLP resources exist and are of decent quality, but
-every one of them is monolingual or parallel by construction.** A parallel corpus is the
-opposite of what we need — it is specifically clean Kazakh on one side and clean Russian
-on the other, never the two interleaved in one sentence.
-
-⚠ **Required before the report:** a proper negative-result search. The gap claim rests on
-it, so search ACL Anthology, Google Scholar and HuggingFace datasets for
-"Kazakh code-switching", "Kazakh-Russian code-mixing", "қазақша орысша араласқан",
-and record what you searched and found nothing.
+The resources in this table cover entity recognition, translation and morphology.
+Section 5 covers Kazakh–Russian switching and sentiment datasets directly.
 
 ---
 
@@ -288,28 +277,19 @@ reviewer can disprove with one search.
 
 1. **The task definition is safe.** 3-class sentiment on code-mixed social text is exactly
    SemEval-2020 Task 9. We inherit a validated formulation.
-2. **H2 has a mechanism, not just a hunch.** XLM-R is pretrained on monolingual CC-100
-   with no mixed-sentence data; GLUECoS shows CS-specific pretraining still adds gains;
+2. **H2 concerns domain transfer.** XLM-R uses language-filtered web data.
+   GLUECoS shows CS-specific pretraining can add gains and
    Winata et al. report multilingual models underperforming on CS. Three independent
    lines point the same way.
 3. **H3 has a mechanism too.** fastText's character n-grams are built for morphologically
    rich languages and absorb spelling variation — both of which describe informal Kazakh.
 4. **The borrowing/switching distinction must be in the guideline**, per Doğruöz et al.,
    or the density metric will overcount switches. Already encoded as density rule #2.
-5. **Shared script is our genuine novelty.** Every major CS benchmark gets surface cues
-   from script or transliteration; Kazakh–Russian does not. Say this explicitly — it is
-   the strongest "why is this hard" sentence available.
-6. **Density stratification is the contribution.** Aggregate numbers would replicate known
-   results; the per-density breakdown is what nobody has reported for this pair.
+5. **Shared Cyrillic script complicates token identification.** Diacritic-free Kazakh,
+   names and loanwords create ambiguous tokens in this corpus.
+6. **Density stratification** extends the aggregate comparisons in the reviewed papers.
 
-### 7. Fact-checks outstanding (all ⚠ items, in one list)
-
-- [ ] Kazakh in XLM-R's 100 languages, and its share of CC-100
-- [ ] Kazakh in mBERT's 104 Wikipedia languages
-- [ ] Kazakh among fastText's 157 pretrained language vectors
-- [x] SemEval-2020 Task 9: 20K/19K, pos/neg/neutral, best F1 75.0/80.6 — CONFIRMED
-- [ ] KazNERD exact size; KazParC exact size
-- [x] Negative-result search — DONE, and it came back POSITIVE. See section 5.
+The linked releases in sections 2 and 3 document Kazakh coverage and dataset sizes.
 
 ---
 
@@ -437,7 +417,9 @@ same grounds as the Sprint 1 gaming channels.
 
 ## 2. Cleaning
 
-53,664 raw → **42,497** clean, across 196 videos.
+The three raw files contain 53,664 rows. Excluding 1,832 gaming rows and deduplicating
+407 repeated IDs leaves 51,425 unique inputs. Cleaning removes 8,712 and holds aside
+216 romanized comments, leaving **42,497** comments across 196 videos.
 
 | Removed | Count | Why |
 |---|---|---|
@@ -593,10 +575,9 @@ bucket and 8.8 at n=100, against the 4–8 point gaps this literature reports. B
 
 ## 2. What enrichment costs, and how it is paid
 
-Every enriched row records the stratum it came from and its inclusion probability, so any
-frequency claim can be reweighted by 1/p. A separate **natural probe** of 150 comments is
-drawn uniformly with no enrichment at all, annotated with the same guideline; it is the only
-part of the corpus that may be quoted for how common code-switching actually is.
+The 150-comment natural probe is a uniform draw from the cleaned pool. The enriched
+sample uses round-robin selection across videos. Its stored stratum sampling fraction
+does not give each comment's selection probability. Use the probe for pool frequencies.
 
 **Topic confound.** Strata are filled round-robin across videos. The realised sample covers
 196 distinct videos with no single video above ~1% of it, so "performance differs by
@@ -613,13 +594,10 @@ architecture blind spots — the comments it fails to see as mixed are dispropor
 ones XLM-R also mishandles — and the stratification variable would correlate with the effect
 under test. No amount of spot-checking afterwards separates them.
 
-Every sentiment label carries a confidence flag. On the first 160 comments, **31% came back
-low confidence**, which is honest for informal code-switched text and is itself a result
-worth reporting.
-
-The audit queue takes every low-confidence row **plus a random 12% of the confident ones**.
-Auditing only what the annotator already doubted measures self-knowledge, not accuracy; the
-random slice is what makes the spot-check an unbiased estimate.
+The final sentiment teacher saved class probabilities for all 1,000 comments.
+The completed quality check compares these predictions with the 100-comment
+blind AI review. The earlier prompt-based confidence queue was a proposed workflow.
+[Annotation audit](sprint3_silver_audit.md)
 
 `src/eval/validate_annotations.py` checks every finished batch for invalid values, blanks,
 comment IDs edited by a spreadsheet, and any density bucket that has gone degenerate. If one
@@ -630,8 +608,7 @@ revisiting while there is still time.
 
 # Part VI — Limitations
 
-**The corpus is enriched, not representative.** Any population-level frequency must come
-from the natural probe or from 1/p reweighting, never from the corpus as a whole.
+The uniform probe supports frequency estimates for the cleaned pool of selected videos.
 
 **The density metric still mislabels proper names.** Kazakh names in Russian sentences are
 counted as Kazakh tokens, so roughly 2,238 clearly Russian comments carry a spurious
@@ -644,8 +621,8 @@ validation set.
 
 **Romanized code-switching is out of scope** and reported as such, not as absent.
 
-**Annotation is LLM-assisted with human audit**, not fully manual. The audit measures the
-error rate; it does not eliminate it.
+The completed quality audit measures agreement between AI labelers. Independent human
+agreement is still unmeasured.
 
 **Intra-annotator agreement, when measured, is not inter-annotator agreement.** It shows the
 guideline is applied consistently, not that a second person would read it the same way.

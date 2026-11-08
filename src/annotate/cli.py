@@ -2,6 +2,7 @@
 
     python -m src.annotate.cli data/interim/batches/enriched_01.csv
     python -m src.annotate.cli data/interim/pilot_100_pass1.csv
+    python -m src.annotate.cli --sentiment-only data/interim/human_review/reviewer_A.csv
 
 Reads and writes the same CSV format as the Excel workflow, so the two are
 interchangeable - start in Excel, finish here, or the other way round. Already
@@ -110,8 +111,10 @@ def save(path, rows):
     tmp.replace(path)
 
 
-def is_done(r):
+def is_done(r, sentiment_only=False):
     s = (r.get("sentiment") or "").strip()
+    if sentiment_only:
+        return s in SENT.values()
     if s == "skip":
         return True
     return bool(s and (r.get("density") or "").strip()
@@ -131,7 +134,7 @@ def wrap(text, width):
     return out or [""]
 
 
-def draw(row, i, total, done, path, msg):
+def draw(row, i, total, done, path, msg, sentiment_only=False):
     width = min(shutil.get_terminal_size((100, 30)).columns, 100)
     print("\033[2J\033[H", end="")
 
@@ -157,17 +160,19 @@ def draw(row, i, total, done, path, msg):
                 C["grey"], label, colour + C["bold"], value, C["reset"])
         return "{}{}: {}{}".format(C["grey"], label, "_", C["reset"])
 
-    print("  {}   {}   {}".format(
-        cell("sentiment", row.get("sentiment", ""), C["cyan"]),
-        cell("density", row.get("density", ""), C["yellow"]),
-        cell("lang", row.get("base_lang", ""), C["green"])))
+    fields = [cell("sentiment", row.get("sentiment", ""), C["cyan"])]
+    if not sentiment_only:
+        fields.extend((cell("density", row.get("density", ""), C["yellow"]),
+                       cell("lang", row.get("base_lang", ""), C["green"])))
+    print("  " + "   ".join(fields))
     if (row.get("notes") or "").strip():
         print("  {}note: {}{}".format(C["grey"], row["notes"][:width - 10], C["reset"]))
     print()
 
     print("{}  1 pos   2 neg   3 neu   0 skip{}".format(C["dim"], C["reset"]))
-    print("{}  q mono  w low   e med   r high{}".format(C["dim"], C["reset"]))
-    print("{}  k kk    l ru{}".format(C["dim"], C["reset"]))
+    if not sentiment_only:
+        print("{}  q mono  w low   e med   r high{}".format(C["dim"], C["reset"]))
+        print("{}  k kk    l ru{}".format(C["dim"], C["reset"]))
     print("{}  n note  u undo  b back  s save  ? guideline  x exit{}".format(
         C["dim"], C["reset"]))
     if msg:
@@ -178,6 +183,8 @@ def main():
     _enable_ansi()
     p = argparse.ArgumentParser()
     p.add_argument("file", help="batch CSV to annotate")
+    p.add_argument("--sentiment-only", action="store_true",
+                   help="save and advance after labeling sentiment")
     p.add_argument("--redo", action="store_true",
                    help="start from the top including rows already annotated")
     args = p.parse_args()
@@ -190,7 +197,7 @@ def main():
         raise SystemExit("{} has no rows".format(path))
 
     i = 0 if args.redo else next(
-        (n for n, r in enumerate(rows) if not is_done(r)), len(rows))
+        (n for n, r in enumerate(rows) if not is_done(r, args.sentiment_only)), len(rows))
     if i >= len(rows):
         print("{} is already fully annotated. Use --redo to go through it "
               "again.".format(path.name))
@@ -198,17 +205,18 @@ def main():
 
     msg = ""
     while True:
-        done = sum(1 for r in rows if is_done(r))
+        done = sum(1 for r in rows if is_done(r, args.sentiment_only))
         if i >= len(rows):
             save(path, rows)
             print("\033[2J\033[H", end="")
             print("{}Batch finished.{} {} of {} annotated.\n".format(
                 C["green"] + C["bold"], C["reset"], done, len(rows)))
-            print("Next:\n  python -m src.eval.validate_annotations {}".format(path))
+            if not args.sentiment_only:
+                print("Next:\n  python -m src.eval.validate_annotations {}".format(path))
             return
 
         row = rows[i]
-        draw(row, i, len(rows), done, path, msg)
+        draw(row, i, len(rows), done, path, msg, args.sentiment_only)
         msg = ""
         key = read_key()
         low = key.lower()
@@ -231,7 +239,9 @@ def main():
             i = max(0, i - 1)
             continue
         if low == "u":
-            row["sentiment"] = row["density"] = row["base_lang"] = ""
+            row["sentiment"] = ""
+            if not args.sentiment_only:
+                row["density"] = row["base_lang"] = ""
             msg = "cleared this row"
             continue
         if low == "n":
@@ -250,12 +260,12 @@ def main():
                 # A skipped comment leaves the corpus, so density and base_lang
                 # must stay empty - validate_annotations warns if they do not.
                 row["density"] = row["base_lang"] = ""
-        elif low in DENS:
+        elif not args.sentiment_only and low in DENS:
             if (row.get("sentiment") or "") == "skip":
                 msg = "row is marked skip - press u to clear it first"
                 continue
             row["density"] = DENS[low]
-        elif low in LANG:
+        elif not args.sentiment_only and low in LANG:
             if (row.get("sentiment") or "") == "skip":
                 msg = "row is marked skip - press u to clear it first"
                 continue
@@ -264,9 +274,12 @@ def main():
             msg = "unknown key {!r}".format(key)
             continue
 
-        if is_done(row):
+        if is_done(row, args.sentiment_only):
             save(path, rows)          # flush after every completed row
             i += 1
+            if args.sentiment_only and not args.redo:
+                while i < len(rows) and is_done(rows[i], sentiment_only=True):
+                    i += 1
 
 
 if __name__ == "__main__":
