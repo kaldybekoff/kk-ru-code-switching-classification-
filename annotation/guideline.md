@@ -4,7 +4,7 @@ Kazakh–Russian code-switched YouTube comments
 The original human pilot has six filled sentiments in pass one and zero in pass two.
 For the week 10 AI route, Cardiff labels sentiment at comment level. The deterministic
 metric estimates word languages and groups comments. The blind AI review is a separate
-comparison. [Week 10 audit and worked examples](../reports/week10_audit_ru.md)
+comparison.
 
 Every comment gets **two independent labels**: a sentiment label (axis 1) and a
 code-switch density label (axis 2). They are annotated at the same time but must

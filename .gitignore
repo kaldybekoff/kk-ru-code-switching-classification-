@@ -1,65 +1,67 @@
-# Secrets
-.env
+# Keep new top-level working files private unless listed below.
+/[!.]*
+!/requirements.txt
+!/src/
+!/tests/
+!/data/
+!/annotation/
+!/docs/
+!/reports/
 
-# Markdown is gitignored by default, with the research artifacts allowed back in.
-# The guideline and the sampling design are methodology, not working notes - their
-# version history is part of the record.
+# Source and tests
+/src/**
+!/src/**/
+!/src/**/*.py
+/tests/**
+!/tests/**/
+!/tests/**/*.py
+
+# Public technical documentation
 *.md
-!README.md
-!PROJECT_PLAN.md
-!annotation/*.md
-!docs/*.md
-!reports/research_report.md
-!reports/sprint3_corpus_audit.md
-!reports/sprint3_status.md
-!reports/sprint3_baselines.md
-!reports/sprint3_silver_audit.md
-!reports/sprint3_silver_baselines.md
-!reports/sprint3_silver_cv.md
-!reports/sprint4_corpus_audit.md
-!reports/sprint4_cv_metrics.md
-!reports/sprint4_review_metrics.md
-!reports/sprint4_cv_comparison.md
-!reports/sprint4_review_comparison.md
-!reports/sprint4_status.md
-!reports/sprint5_comparison.md
-!reports/sprint5_cv_metrics.md
-!reports/sprint5_review_metrics.md
-!reports/sprint5_status.md
-!reports/sprint5_human_review_ru.md
-!reports/week10_audit_ru.md
-!reports/sprint6_error_analysis_ru.md
+!/.github/README.md
+/annotation/*
+!/annotation/guideline.md
+/docs/*
+!/docs/sampling_design.md
 
-# Video production scaffolding stays local.
-reports/video/
-reports/*.html
+# Keep an output directory for scripts that write reports.
+/reports/*
+!/reports/.gitkeep
 
-# Data — raw and interim never committed (YouTube ToS + PII)
-data/raw/*
-data/interim/*
-!data/raw/.gitkeep
-!data/interim/.gitkeep
+# Inputs for collection, training and reproducible evaluation
+/data/*
+!/data/sources.csv
+!/data/videos.csv
+!/data/raw/
+!/data/interim/
+!/data/labeled/
+/data/raw/*
+!/data/raw/.gitkeep
+/data/interim/*
+!/data/interim/.gitkeep
+/data/labeled/*
+!/data/labeled/corpus_silver.csv
+!/data/labeled/corpus_silver_train.csv
+!/data/labeled/corpus_ai_review_test.csv
+!/data/labeled/validation_ai_review.csv
+!/data/labeled/folds_silver.json
+!/data/labeled/density_word_counts.csv
+!/data/labeled/predictions_sprint5_grouped_ai_review.csv
+!/data/labeled/predictions_sprint5_grouped_silver_cv.csv
 
-# Labeled data: keep the final CSV, ignore scratch exports
-data/labeled/*.jsonl
-
-# Python
+# Local credentials, environments and caches
+.env
+.env.*
+!/.env.example
+.venv/
 __pycache__/
 *.py[cod]
-.venv/
-venv/
-*.egg-info/
-
-# Notebooks
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .ipynb_checkpoints/
-
-# Models / embeddings (large binaries)
-*.bin
-*.vec
-models_cache/
-
-# OS / editors
-.DS_Store
-Thumbs.db
+*.egg-info/
 .vscode/
 .idea/
+.DS_Store
+Thumbs.db
